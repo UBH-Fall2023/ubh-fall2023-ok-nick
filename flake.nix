@@ -24,7 +24,7 @@
     packages.${system}.default = navigate;
 
     devShells.${system}.default = pkgs.mkShell {
-      buildInputs = [navigate];
+      buildInputs = [pkgs.matrix-synapse-unwrapped];
     };
   };
 }

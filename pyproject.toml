@@ -1,5 +1,5 @@
 [project]
-name = "synapse-navigate"
+name = "navigate"
 version = "0.1.0"
 description = "A synapse module for creating anonymous class section-specific channels"
 authors = [{ name = "ok-nick", email = "nick.libraries@gmail.com" }]

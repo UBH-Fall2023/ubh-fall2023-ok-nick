@@ -1,73 +1,134 @@
-from typing import Any
+import logging
+import random
+import sys
+from typing import Any, Dict, cast
 
-import synapse
-from synapse.module_api import ModuleApi, cached
+from synapse.api.errors import SynapseError
+from synapse.module_api import JsonDict, ModuleApi
 
 import navigate
 
-ADMIN_ID = "ADMIN"
+ADMIN_NAME = "admin"
+
+logger = logging.getLogger("MY_LOGGER")
+logger.info("TEST WHAT")
 
 
 class Navigate:
     def __init__(self, config: Any, api: ModuleApi):
+        logger.info("YES WORK")
         self.api = api
+        self.class_id_to_room_id = {}  # TODO: needs to be persistent
+
         api.register_password_auth_provider_callbacks(
-            # TODO
-            auth_checkers={("m.login.registration_token", ("token")): self.check_auth}
-        )
-        api.register_account_validity_callbacks(
-            on_user_registration=self.on_user_registration
+            auth_checkers={
+                ("m.login.password", ("password",)): self.check_auth,
+            },
+            get_username_for_registration=self.get_username_for_registration,
         )
 
-        api.register_user(ADMIN_ID, admin=True)
+        # api.register_account_validity_callbacks(
+        # on_user_registration=self.on_user_registration
+        # )
+
+        self.admin_id = self.api.get_qualified_user_id("nicky")
 
     async def check_auth(
         self,
         username: str,
         login_type: str,
-        login_dict: "synapse.module_api.JsonDict",
+        login_dict: JsonDict,
     ):
-        if login_type != "registration_token":
+        logger.info(f"TEST2 {login_type}")
+
+        if login_type != "m.login.password":
             return None
 
-        token = login_dict.get("token")
-        if token is None:
-            return None
-
-        # get classes, return None if token is invalid
+        # get classes, return None if password is invalid
         # TODO: use self.http_client
-        classes = navigate.classes(token)
+        classes = await navigate.classes(self.api.http_client, username)
+        logger.info("FINDING3")
         if classes is None:
             return None
 
-        user_id = self.api.get_qualified_user_id(username)
-        self.api.put_global(user_id, "Classes", classes)
+        logger.info("FINDING2")
+        # TODO: improve
 
-        return (user_id, None)
-
-    def on_user_registration(self, username: str):
         user_id = self.api.get_qualified_user_id(username)
-        classes = self.api.get_global(user_id, "Classes")
+        # await self.api.account_data_manager.put_global(
+        # user_id, "access", {"classes": classes}
+        # )
+
+        logger.info("FINDING")
 
         for info in classes:
             # TODO create class for general class names, not just ids
-            room_id = self.api.lookup_room_alias(info.class_id)
-            if room_id is not None:
-                room_id = self.api.create_room(
-                    ADMIN_ID,
-                    username,
-                    {
-                        "name": info.room,
-                        "preset": "trusted_private_chat",  # TODO: or regular private?
-                        "room_alias_name": info.id,
-                        # "visibility": "private", # default
-                    },
-                )
+            try:
+                room_id = (
+                    await self.api.lookup_room_alias(f"#{info.id}:localhost:8080")
+                )[0]
+                logger.info(f"ROOM ID: {room_id}")
+            except SynapseError:
+                room_id = (
+                    await self.api.create_room(
+                        self.admin_id,
+                        {
+                            "name": f"{info.name} ({info.section}) - {info.title}",
+                            "topic": info.description,
+                            "preset": "private_chat",  # TODO: or regular private?
+                            "room_alias_name": info.id,
+                            # "visibility": "private", # default
+                        },
+                    )
+                )[0]
+                self.class_id_to_room_id[info.id] = room_id
 
-            self.api.update_room_membership(
-                ADMIN_ID, username, room_id, "m.room.member"
+            logger.info("INVITE TO ROOM")
+
+            await self.api.update_room_membership(
+                self.admin_id, user_id, room_id, "invite"
             )
 
-    def is_user_expired(self, username: str):
+        return (user_id, None)
+
+    async def on_user_registration(self, username: str):
+        logger.info("TEST4")
+
+        user_id = self.api.get_qualified_user_id(username)
+        classes = cast(
+            Dict[str, list[navigate.Section]],
+            await self.api.account_data_manager.get_global(user_id, "access"),
+        )["classes"]
+
+        for info in classes:
+            # TODO create class for general class names, not just ids
+            room_id = (await self.api.lookup_room_alias(info.id))[0]
+            if room_id is not None:
+                room_id = (
+                    await self.api.create_room(
+                        self.admin_id,
+                        {
+                            "name": info.name,
+                            "preset": "trusted_private_chat",  # TODO: or regular private?
+                            "room_alias_name": info.id,
+                            # "visibility": "private", # default
+                        },
+                    )
+                )[0]
+
+            await self.api.update_room_membership(
+                self.admin_id, username, room_id, "join"
+            )
+
+    async def get_username_for_registration(
+        self,
+        uia_results: Dict[str, Any],
+        params: Dict[str, Any],
+    ):
+        # TODO: improve
+        # names cannot be only ids, otherwise error
+        return "user" + str(random.randint(0, sys.maxsize))
+
+    async def is_user_expired(self, username: str):
         # TODO: verify user token still works
         pass
