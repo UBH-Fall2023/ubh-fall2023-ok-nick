@@ -6,20 +6,18 @@ from typing import Any, Dict, cast
 from synapse.api.errors import SynapseError
 from synapse.module_api import JsonDict, ModuleApi
 
-import navigate
+from . import navigate
 
 ADMIN_NAME = "admin"
 
-logger = logging.getLogger("MY_LOGGER")
-logger.info("TEST WHAT")
+logger = logging.getLogger("navigate")
 
 
 class Navigate:
     def __init__(self, config: Any, api: ModuleApi):
-        logger.info("YES WORK")
         self.api = api
 
-        # TODO: it would be idea to use the global data functions
+        # TODO: it would be ideal to use global data functions
         self.username_to_token = {}  # TODO: needs to be persistent
 
         api.register_password_auth_provider_callbacks(
@@ -49,24 +47,18 @@ class Navigate:
         # await self.api.account_data_manager.get_global(user_id, "credentials"),
         # )
 
-        logger.info(f"USERNAME: {username} USERID: {user_id}")
-
         # get classes, return None if password is invalid
         classes = await navigate.classes(
             self.api.http_client, self.username_to_token[username]
         )
-        logger.info("FINDING3")
         if classes is None:
             return None
 
-        logger.info("FINDING2")
         # TODO: improve
 
         # await self.api.account_data_manager.put_global(
         # user_id, "access", {"classes": classes}
         # )
-
-        logger.info("FINDING")
 
         for info in classes:
             # TODO create class for general class names, not just ids
@@ -74,7 +66,6 @@ class Navigate:
                 room_id = (
                     await self.api.lookup_room_alias(f"#{info.id}:localhost:8080")
                 )[0]
-                logger.info(f"ROOM ID: {room_id}")
             except SynapseError:
                 room_id = (
                     await self.api.create_room(
@@ -89,8 +80,6 @@ class Navigate:
                     )
                 )[0]
 
-            logger.info("INVITE TO ROOM")
-
             await self.api.update_room_membership(
                 self.admin_id, user_id, room_id, "invite"
             )
@@ -102,13 +91,12 @@ class Navigate:
         uia_results: Dict[str, Any],
         params: Dict[str, Any],
     ):
-        logger.info(f"YESYES {uia_results}")
         # TODO: improve randomness
         username = "user" + str(random.randint(0, sys.maxsize))
 
-        self.username_to_token[username] = params["username"]
+        user_id = self.api.get_qualified_user_id(username)
+        self.username_to_token[user_id] = params["username"]
 
-        # user_id = self.api.get_qualified_user_id(username)
         # await self.api.account_data_manager.put_global(
         #     user_id, "credentials", {"token": params["username"]}
         # )

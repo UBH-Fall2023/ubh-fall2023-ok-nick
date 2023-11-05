@@ -5,7 +5,7 @@
 # `yap my classes`
 `yap my classes` (YMC) is a self-hosted Matrix server for anonymously communicating with other students in your University at Buffalo (UB) classes.
 
-It works by prompting the user for a UB Navigate access token (username field), which allows YMC to assign the user to text channels corresponding to their specific class section. Users may also provide a password (password field) so that they may log in under the same account at a later date. Even if the access token refreshes, the user can still log in with their new token and the same password.
+It works by prompting the user for a UB Navigate access token (username field), which allows YMC to assign the user to text channels corresponding to their specific class sections. Users may also provide a password (password field) so that they may log in under the same account at a later date. Even if the access token refreshes, the user can still log in with their new token and the same password.
 
 ## Features
 * **Matrix!** - Built on the matrix protocol for a feature-rich interface.
@@ -19,14 +19,35 @@ It works by prompting the user for a UB Navigate access token (username field), 
 * Encourage open and honest conversations with anonymity.
 
 ## Installation
-1. Install matrix-synapse.
-2. Other stuff, nginx, etc.
-3. Setup config.
-4. Etc.
-or
-1. Use nix flake.
-or
-TODO
+## Nix Flake
+```nix
+# flake.nix
+
+{
+  inputs.yap-my-classes.url = "github:ok-nick/ubh-fall2022-repotemplate-ok-nick";
+  # ...
+
+  outputs = {nixpkgs, ...} @ inputs: {
+    nixosConfigurations.HOSTNAME = nixpkgs.lib.nixosSystem {
+      specialArgs = { inherit inputs; }; # this is the important part
+      modules = [
+        ./configuration.nix
+      ];
+    };
+  } 
+}
+
+# configuration.nix
+
+{inputs, pkgs, ...}: {
+   programs.yap-my-classes = {
+    enable = true;
+    package = inputs.yap-my-classes.packages.${pkgs.system}.default;
+  };
+}
+```
+## Other
+Install `matrix-synapse`, `postgresql`, `nginx`, etc. TODO
 
 ## UB Hacking Fall 2023 Rules 
 - Teams can consist of between 1 and 4 people.

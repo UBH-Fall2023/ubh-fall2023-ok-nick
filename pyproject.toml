@@ -1,5 +1,5 @@
 [project]
-name = "navigate"
+name = "yap_my_classes"
 version = "0.1.0"
 description = "A Matrix server for anonymously communicating with UB classmates in each class section"
 authors = [{ name = "ok-nick", email = "nick.libraries@gmail.com" }]
