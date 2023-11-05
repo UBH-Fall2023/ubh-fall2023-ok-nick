@@ -1,5 +1,5 @@
 {
-  description = "A synapse module for creating anonymous class section-specific channels";
+  description = "A Matrix server for anonymously communicating with UB classmates in each class section";
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";

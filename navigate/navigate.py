@@ -21,8 +21,8 @@ async def classes(client: BaseHttpClient, token: str) -> Optional[list[Section]]
         result = await client.get_json(
             ENDPOINT,
             headers={
-                # b"Cookie": [f"sessionid={token}".encode()],
-                b"Cookie": [b"sessionid=rd82n7gkozbgmzy5bfbb3f3jsgvnr5o7"]
+                "Cookie": [f"sessionid={token}"],
+                # b"Cookie": [b"sessionid=rd82n7gkozbgmzy5bfbb3f3jsgvnr5o7"]
             },
         )
     except HttpResponseException as e:
